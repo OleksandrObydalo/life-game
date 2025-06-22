@@ -18,19 +18,26 @@
         <canvas id="gameCanvas"></canvas>
         <div class="controls">
             <button id="startButton">Start</button>
-            <button id="stopButton">Stop</button>
+            <button id="pauseButton">Pause</button>
             <button id="stepButton">Next Step</button>
             <button id="resetButton">Clear</button>
         </div>
+        <div class="speed-control">
+            <label for="speedSlider">Speed (ms/frame):</label>
+            <input type="range" id="speedSlider" min="20" max="1000" value="100" step="10">
+            <span id="speedValue">100</span>
+        </div>
     </div>
     <script type="module">
-        import { initGame, startGame, stopGame, stepGame, resetGame, toggleCell } from 'game';
+        import { initGame, startGame, pauseGame, stepGame, resetGame, toggleCell, setGameSpeed } from 'game';
 
         const canvas = document.getElementById('gameCanvas');
         const startBtn = document.getElementById('startButton');
-        const stopBtn = document.getElementById('stopButton');
+        const pauseBtn = document.getElementById('pauseButton');
         const stepBtn = document.getElementById('stepButton');
         const resetBtn = document.getElementById('resetButton');
+        const speedSlider = document.getElementById('speedSlider');
+        const speedValueSpan = document.getElementById('speedValue');
 
         initGame(canvas);
 
@@ -42,9 +49,15 @@
         });
 
         startBtn.addEventListener('click', startGame);
-        stopBtn.addEventListener('click', stopGame);
+        pauseBtn.addEventListener('click', pauseGame);
         stepBtn.addEventListener('click', stepGame);
         resetBtn.addEventListener('click', resetGame);
+
+        speedSlider.addEventListener('input', (event) => {
+            const newSpeed = parseInt(event.target.value, 10);
+            speedValueSpan.textContent = newSpeed;
+            setGameSpeed(newSpeed);
+        });
     </script>
 </body>
 </html>

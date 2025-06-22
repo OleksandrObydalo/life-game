@@ -8,6 +8,7 @@ let grid;
 let animationFrameId;
 let gameIntervalId;
 let isRunning = false;
+let gameSpeedMs = 100; // Default game speed in milliseconds
 
 // Function to initialize the grid
 function initGrid() {
@@ -146,16 +147,16 @@ export function toggleCell(x, y) {
 export function startGame() {
     if (isRunning) return;
     isRunning = true;
-    // Set an interval for game logic updates (e.g., every 100ms)
+    // Set an interval for game logic updates, using current gameSpeedMs
     gameIntervalId = setInterval(() => {
         updateGame();
-    }, 100);
+    }, gameSpeedMs);
 }
 
 /**
- * Stops the game simulation.
+ * Pauses the game simulation.
  */
-export function stopGame() {
+export function pauseGame() {
     if (!isRunning) return;
     isRunning = false;
     clearInterval(gameIntervalId);
@@ -165,7 +166,7 @@ export function stopGame() {
  * Advances the game by one step (one generation).
  */
 export function stepGame() {
-    if (isRunning) stopGame(); // Stop if running before stepping
+    if (isRunning) pauseGame(); // Pause if running before stepping
     updateGame();
 }
 
@@ -173,8 +174,20 @@ export function stepGame() {
  * Clears the grid and resets the game.
  */
 export function resetGame() {
-    stopGame();
+    pauseGame();
     initGrid();
     draw();
 }
 
+/**
+ * Sets the speed of the game simulation.
+ * If the game is running, it restarts the interval with the new speed.
+ * @param {number} newSpeedMs The new interval in milliseconds per frame.
+ */
+export function setGameSpeed(newSpeedMs) {
+    gameSpeedMs = newSpeedMs;
+    if (isRunning) {
+        clearInterval(gameIntervalId); // Clear existing interval
+        gameIntervalId = setInterval(updateGame, gameSpeedMs); // Start new interval with new speed
+    }
+}

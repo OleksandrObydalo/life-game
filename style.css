@@ -57,3 +57,54 @@ button:active {
     background-color: #1a7bbd;
 }
 
+.speed-control {
+    margin-top: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    max-width: 400px; /* Adjust as needed */
+    justify-content: center;
+}
+
+.speed-control label {
+    white-space: nowrap;
+}
+
+.speed-control input[type="range"] {
+    width: 70%;
+    -webkit-appearance: none;
+    height: 8px;
+    border-radius: 5px;
+    background: #555;
+    outline: none;
+    opacity: 0.7;
+    transition: opacity .2s;
+}
+
+.speed-control input[type="range"]:hover {
+    opacity: 1;
+}
+
+.speed-control input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #61dafb;
+    cursor: pointer;
+}
+
+.speed-control input[type="range"]::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #61dafb;
+    cursor: pointer;
+}
+
+.speed-control span {
+    min-width: 30px; /* Ensure space for number */
+    text-align: right;
+}
