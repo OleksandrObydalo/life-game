@@ -33,7 +33,7 @@
         </div>
     </div>
     <script type="module">
-        import { initGame, startGame, pauseGame, stepGame, resetGame, handleCellClick, setGameSpeed, setEditingMode, GAME_MODE_CREATE, GAME_MODE_DESTROY } from 'game';
+        import { initGame, startGame, pauseGame, stepGame, resetGame, setGameSpeed, setEditingMode, handleMouseDown, handleMouseMove, handleMouseUp, GAME_MODE_CREATE, GAME_MODE_DESTROY } from 'game';
 
         const canvas = document.getElementById('gameCanvas');
         const startBtn = document.getElementById('startButton');
@@ -47,12 +47,23 @@
 
         initGame(canvas);
 
-        canvas.addEventListener('click', (event) => {
+        // Event listeners for drawing/erasing cells
+        canvas.addEventListener('mousedown', (event) => {
             const rect = canvas.getBoundingClientRect();
             const x = event.clientX - rect.left;
             const y = event.clientY - rect.top;
-            handleCellClick(x, y);
+            handleMouseDown(x, y);
         });
+
+        canvas.addEventListener('mousemove', (event) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+            handleMouseMove(x, y);
+        });
+
+        // Use document for mouseup to ensure release is caught even if mouse leaves canvas
+        document.addEventListener('mouseup', handleMouseUp);
 
         startBtn.addEventListener('click', startGame);
         pauseBtn.addEventListener('click', pauseGame);

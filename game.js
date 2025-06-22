@@ -9,11 +9,15 @@ export const GAME_MODE_DESTROY = 'destroy';
 let canvas;
 let ctx;
 let grid;
-let animationFrameId;
+let animationFrameId; // Not currently used, could be for requestAnimationFrame
 let gameIntervalId;
 let isRunning = false;
 let gameSpeedMs = 100; // Default game speed in milliseconds
 let currentEditingMode = GAME_MODE_CREATE; // Default editing mode
+
+let isDrawing = false; // New: Flag to indicate if mouse button is held down for drawing
+let lastDrawnRow = -1; // New: Stores the row of the last cell drawn during drag
+let lastDrawnCol = -1; // New: Stores the col of the last cell drawn during drag
 
 // Function to initialize the grid
 function initGrid() {
@@ -114,6 +118,22 @@ function draw() {
     drawGridLines(); // Draw grid lines on top
 }
 
+/**
+ * Toggles the state of a single cell based on the current editing mode.
+ * @param {number} row The row index of the cell.
+ * @param {number} col The column index of the cell.
+ */
+function toggleCell(row, col) {
+    if (row >= 0 && row < GRID_HEIGHT_CELLS && col >= 0 && col < GRID_WIDTH_CELLS) {
+        if (currentEditingMode === GAME_MODE_CREATE) {
+            grid[row][col] = 1; // Set cell to alive
+        } else if (currentEditingMode === GAME_MODE_DESTROY) {
+            grid[row][col] = 0; // Set cell to dead
+        }
+        draw(); // Redraw immediately
+    }
+}
+
 // Public functions
 
 /**
@@ -132,22 +152,52 @@ export function initGame(canvasElement) {
 }
 
 /**
- * Handles a click on a cell, either creating or destroying based on the current editing mode.
- * @param {number} x X-coordinate of the click.
- * @param {number} y Y-coordinate of the click.
+ * Handles the mouse down event on the canvas to start drawing/erasing.
+ * @param {number} x X-coordinate of the mouse.
+ * @param {number} y Y-coordinate of the mouse.
  */
-export function handleCellClick(x, y) {
+export function handleMouseDown(x, y) {
+    if (isRunning) return; // Do not allow drawing if game is running
+
+    isDrawing = true;
+    const col = Math.floor(x / CELL_SIZE);
+    const row = Math.floor(y / CELL_SIZE);
+    
+    toggleCell(row, col);
+    lastDrawnRow = row;
+    lastDrawnCol = col;
+}
+
+/**
+ * Handles the mouse move event on the canvas for continuous drawing/erasing.
+ * @param {number} x X-coordinate of the mouse.
+ * @param {number} y Y-coordinate of the mouse.
+ */
+export function handleMouseMove(x, y) {
+    if (!isDrawing) return; // Only draw if mouse is down
+    if (isRunning) return; // Do not allow drawing if game is running
+
     const col = Math.floor(x / CELL_SIZE);
     const row = Math.floor(y / CELL_SIZE);
 
-    if (row >= 0 && row < GRID_HEIGHT_CELLS && col >= 0 && col < GRID_WIDTH_CELLS) {
-        if (currentEditingMode === GAME_MODE_CREATE) {
-            grid[row][col] = 1; // Set cell to alive
-        } else if (currentEditingMode === GAME_MODE_DESTROY) {
-            grid[row][col] = 0; // Set cell to dead
-        }
-        draw(); // Redraw immediately
+    // Only toggle if the mouse has moved to a new cell
+    if (row !== lastDrawnRow || col !== lastDrawnCol) {
+        // A simple approach: just toggle the current cell.
+        // For a more precise line, Bresenham's algorithm could be used
+        // to fill in cells between (lastDrawnRow, lastDrawnCol) and (row, col).
+        toggleCell(row, col);
+        lastDrawnRow = row;
+        lastDrawnCol = col;
     }
+}
+
+/**
+ * Handles the mouse up event to stop drawing.
+ */
+export function handleMouseUp() {
+    isDrawing = false;
+    lastDrawnRow = -1; // Reset last drawn cell coordinates
+    lastDrawnCol = -1;
 }
 
 /**
