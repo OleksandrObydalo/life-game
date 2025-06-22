@@ -2,6 +2,10 @@ const CELL_SIZE = 10; // Size of each cell in pixels
 const GRID_WIDTH_CELLS = 70; // Number of cells wide
 const GRID_HEIGHT_CELLS = 50; // Number of cells high
 
+// Define editing modes
+export const GAME_MODE_CREATE = 'create';
+export const GAME_MODE_DESTROY = 'destroy';
+
 let canvas;
 let ctx;
 let grid;
@@ -9,6 +13,7 @@ let animationFrameId;
 let gameIntervalId;
 let isRunning = false;
 let gameSpeedMs = 100; // Default game speed in milliseconds
+let currentEditingMode = GAME_MODE_CREATE; // Default editing mode
 
 // Function to initialize the grid
 function initGrid() {
@@ -127,17 +132,33 @@ export function initGame(canvasElement) {
 }
 
 /**
- * Toggles the state of a cell at the given pixel coordinates.
+ * Handles a click on a cell, either creating or destroying based on the current editing mode.
  * @param {number} x X-coordinate of the click.
  * @param {number} y Y-coordinate of the click.
  */
-export function toggleCell(x, y) {
+export function handleCellClick(x, y) {
     const col = Math.floor(x / CELL_SIZE);
     const row = Math.floor(y / CELL_SIZE);
 
     if (row >= 0 && row < GRID_HEIGHT_CELLS && col >= 0 && col < GRID_WIDTH_CELLS) {
-        grid[row][col] = 1 - grid[row][col]; // Toggle 0 to 1, or 1 to 0
+        if (currentEditingMode === GAME_MODE_CREATE) {
+            grid[row][col] = 1; // Set cell to alive
+        } else if (currentEditingMode === GAME_MODE_DESTROY) {
+            grid[row][col] = 0; // Set cell to dead
+        }
         draw(); // Redraw immediately
+    }
+}
+
+/**
+ * Sets the current editing mode for cell manipulation.
+ * @param {string} mode The mode to set, either GAME_MODE_CREATE or GAME_MODE_DESTROY.
+ */
+export function setEditingMode(mode) {
+    if (mode === GAME_MODE_CREATE || mode === GAME_MODE_DESTROY) {
+        currentEditingMode = mode;
+    } else {
+        console.warn(`Invalid editing mode: ${mode}`);
     }
 }
 
