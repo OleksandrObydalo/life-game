@@ -1,6 +1,14 @@
-const CELL_SIZE = 10; // Size of each cell in pixels
-const GRID_WIDTH_CELLS = 70; // Number of cells wide
-const GRID_HEIGHT_CELLS = 50; // Number of cells high
+let CELL_SIZE = 10; // Size of each cell in pixels
+let GRID_WIDTH_CELLS = 70; // Number of cells wide
+let GRID_HEIGHT_CELLS = 50; // Number of cells high
+
+// Define min/max values for cell size (zoom)
+const MIN_CELL_SIZE = 5;
+const MAX_CELL_SIZE = 30;
+
+// Define min/max values for grid dimensions
+const MIN_GRID_DIM = 10;
+const MAX_GRID_DIM = 200;
 
 // Define editing modes
 export const GAME_MODE_CREATE = 'create';
@@ -211,7 +219,13 @@ function copySelection(endPoint) {
         for (let c = 0; c < bufferCols; c++) {
             const gridRow = topLeft.row + r;
             const gridCol = topLeft.col + c;
-            copyBuffer[r][c] = grid[gridRow][gridCol];
+            // Ensure gridRow and gridCol are within bounds before accessing grid
+            if (gridRow >= 0 && gridRow < GRID_HEIGHT_CELLS && gridCol >= 0 && gridCol < GRID_WIDTH_CELLS) {
+                copyBuffer[r][c] = grid[gridRow][gridCol];
+            } else {
+                // If selection goes out of bounds, treat it as empty cells
+                copyBuffer[r][c] = 0;
+            }
         }
     }
     console.log(`Cells copied to buffer (size R${bufferRows}xC${bufferCols}):`, copyBuffer);
@@ -247,6 +261,17 @@ function pasteCells(targetRow, targetCol) {
     draw(); // Redraw the grid after pasting
 }
 
+/**
+ * Updates the canvas dimensions based on current grid size and cell size, then redraws.
+ */
+function updateCanvasDimensionsAndDraw() {
+    if (!canvas || !ctx) return; // Ensure canvas context is ready
+
+    canvas.width = GRID_WIDTH_CELLS * CELL_SIZE;
+    canvas.height = GRID_HEIGHT_CELLS * CELL_SIZE;
+    draw();
+}
+
 // Public functions
 
 /**
@@ -257,11 +282,8 @@ export function initGame(canvasElement) {
     canvas = canvasElement;
     ctx = canvas.getContext('2d');
 
-    canvas.width = GRID_WIDTH_CELLS * CELL_SIZE;
-    canvas.height = GRID_HEIGHT_CELLS * CELL_SIZE;
-
-    initGrid();
-    draw();
+    initGrid(); // Initialize grid with default dimensions
+    updateCanvasDimensionsAndDraw(); // Set initial canvas size and draw
 }
 
 /**
@@ -331,7 +353,11 @@ export function handleMouseMove(x, y) {
             isDrawing = false; // Stop drawing when cursor leaves canvas
         }
         if (currentEditingMode === GAME_MODE_COPY && isSelecting && selectionStart) {
-            selectionCurrentCorner = selectionStart; // Reset preview to just the start point
+            // If dragging selection out of bounds, constrain the current corner for preview
+            selectionCurrentCorner = {
+                row: Math.max(0, Math.min(GRID_HEIGHT_CELLS - 1, row)),
+                col: Math.max(0, Math.min(GRID_WIDTH_CELLS - 1, col))
+            };
             draw();
         }
         return;
@@ -428,7 +454,7 @@ export function stepGame() {
 export function resetGame() {
     pauseGame();
     initGrid();
-    draw();
+    updateCanvasDimensionsAndDraw(); // Use this to redraw after clearing grid
     copyBuffer = null; // Also clear the copy buffer on reset
     clearSelectionState(); // Ensure selection UI is reset
 }
@@ -444,4 +470,59 @@ export function setGameSpeed(newSpeedMs) {
         clearInterval(gameIntervalId); // Clear existing interval
         gameIntervalId = setInterval(updateGame, gameSpeedMs); // Start new interval with new speed
     }
+}
+
+/**
+ * Sets the width and height of the game board.
+ * Resets the grid and redraws the canvas.
+ * @param {number} newWidth The new width in cells.
+ * @param {number} newHeight The new height in cells.
+ */
+export function setGridDimensions(newWidth, newHeight) {
+    if (isRunning) pauseGame(); // Pause game to prevent issues during resize
+
+    // Validate and clamp new dimensions
+    GRID_WIDTH_CELLS = Math.max(MIN_GRID_DIM, Math.min(MAX_GRID_DIM, newWidth || GRID_WIDTH_CELLS));
+    GRID_HEIGHT_CELLS = Math.max(MIN_GRID_DIM, Math.min(MAX_GRID_DIM, newHeight || GRID_HEIGHT_CELLS));
+
+    initGrid(); // Re-initialize grid with new dimensions (clears current pattern)
+    updateCanvasDimensionsAndDraw(); // Update canvas size and redraw
+    copyBuffer = null; // Clear copy buffer on grid resize
+    clearSelectionState(); // Clear any active selection
+}
+
+/**
+ * Increases the cell size, effectively zooming in.
+ * @returns {number} The new CELL_SIZE.
+ */
+export function zoomIn() {
+    if (CELL_SIZE < MAX_CELL_SIZE) {
+        CELL_SIZE += 1;
+        updateCanvasDimensionsAndDraw();
+    }
+    return CELL_SIZE;
+}
+
+/**
+ * Decreases the cell size, effectively zooming out.
+ * @returns {number} The new CELL_SIZE.
+ */
+export function zoomOut() {
+    if (CELL_SIZE > MIN_CELL_SIZE) {
+        CELL_SIZE -= 1;
+        updateCanvasDimensionsAndDraw();
+    }
+    return CELL_SIZE;
+}
+
+/**
+ * Returns the current game configuration (cell size, grid dimensions).
+ * @returns {{cellSize: number, gridWidth: number, gridHeight: number}}
+ */
+export function getGameConfig() {
+    return {
+        cellSize: CELL_SIZE,
+        gridWidth: GRID_WIDTH_CELLS,
+        gridHeight: GRID_HEIGHT_CELLS
+    };
 }

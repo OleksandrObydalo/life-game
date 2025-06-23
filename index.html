@@ -33,9 +33,23 @@
             <input type="range" id="speedSlider" min="20" max="1000" value="100" step="10">
             <span id="speedValue">100</span>
         </div>
+        <!-- New controls for board dimensions -->
+        <div class="board-dimensions-control">
+            <label for="gridWidth">Width:</label>
+            <input type="number" id="gridWidth" min="10" max="200" value="70">
+            <label for="gridHeight">Height:</label>
+            <input type="number" id="gridHeight" min="10" max="200" value="50">
+            <button id="applyDimensionsButton">Apply Dimensions</button>
+        </div>
+        <!-- New controls for zoom -->
+        <div class="zoom-control">
+            <button id="zoomOutButton">-</button>
+            <span id="cellSizeValue">10px</span>
+            <button id="zoomInButton">+</button>
+        </div>
     </div>
     <script type="module">
-        import { initGame, startGame, pauseGame, stepGame, resetGame, setGameSpeed, setEditingMode, handleMouseDown, handleMouseMove, handleMouseUp, GAME_MODE_CREATE, GAME_MODE_DESTROY, GAME_MODE_COPY, GAME_MODE_PASTE } from 'game';
+        import { initGame, startGame, pauseGame, stepGame, resetGame, setGameSpeed, setEditingMode, handleMouseDown, handleMouseMove, handleMouseUp, GAME_MODE_CREATE, GAME_MODE_DESTROY, GAME_MODE_COPY, GAME_MODE_PASTE, setGridDimensions, zoomIn, zoomOut, getGameConfig } from 'game';
 
         const canvas = document.getElementById('gameCanvas');
         const startBtn = document.getElementById('startButton');
@@ -49,7 +63,21 @@
         const copyModeBtn = document.getElementById('copyModeButton');
         const pasteModeBtn = document.getElementById('pasteModeButton');
 
+        // New elements for dimension and zoom controls
+        const gridWidthInput = document.getElementById('gridWidth');
+        const gridHeightInput = document.getElementById('gridHeight');
+        const applyDimensionsBtn = document.getElementById('applyDimensionsButton');
+        const zoomInBtn = document.getElementById('zoomInButton');
+        const zoomOutBtn = document.getElementById('zoomOutButton');
+        const cellSizeValueSpan = document.getElementById('cellSizeValue');
+
         initGame(canvas);
+
+        // Set initial values for dimension and zoom inputs from game config
+        const initialConfig = getGameConfig();
+        gridWidthInput.value = initialConfig.gridWidth;
+        gridHeightInput.value = initialConfig.gridHeight;
+        cellSizeValueSpan.textContent = `${initialConfig.cellSize}px`;
 
         // Event listeners for drawing/erasing cells
         canvas.addEventListener('mousedown', (event) => {
@@ -68,6 +96,18 @@
 
         // Use document for mouseup to ensure release is caught even if mouse leaves canvas
         document.addEventListener('mouseup', handleMouseUp);
+
+        // New: Wheel event listener for zoom
+        canvas.addEventListener('wheel', (event) => {
+            event.preventDefault(); // Prevent page scrolling
+            let newSize;
+            if (event.deltaY < 0) { // Scroll up (zoom in)
+                newSize = zoomIn();
+            } else { // Scroll down (zoom out)
+                newSize = zoomOut();
+            }
+            cellSizeValueSpan.textContent = `${newSize}px`;
+        });
 
         startBtn.addEventListener('click', startGame);
         pauseBtn.addEventListener('click', pauseGame);
@@ -109,6 +149,24 @@
             const newSpeed = parseInt(event.target.value, 10);
             speedValueSpan.textContent = newSpeed;
             setGameSpeed(newSpeed);
+        });
+
+        // Event listeners for new dimension and zoom controls
+        applyDimensionsBtn.addEventListener('click', () => {
+            const width = parseInt(gridWidthInput.value, 10);
+            const height = parseInt(gridHeightInput.value, 10);
+            setGridDimensions(width, height);
+            // After changing dimensions, the cell size display remains the same as it's not changed
+        });
+
+        zoomInBtn.addEventListener('click', () => {
+            const newSize = zoomIn();
+            cellSizeValueSpan.textContent = `${newSize}px`;
+        });
+
+        zoomOutBtn.addEventListener('click', () => {
+            const newSize = zoomOut();
+            cellSizeValueSpan.textContent = `${newSize}px`;
         });
     </script>
 </body>

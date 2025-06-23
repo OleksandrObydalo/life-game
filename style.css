@@ -122,3 +122,45 @@ button.active-mode {
     min-width: 30px; /* Ensure space for number */
     text-align: right;
 }
+
+/* New styles for dimension and zoom controls */
+.board-dimensions-control,
+.zoom-control {
+    margin-top: 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.board-dimensions-control input[type="number"] {
+    width: 60px;
+    padding: 8px;
+    border-radius: 5px;
+    border: 1px solid #61dafb;
+    background-color: #1a1e24;
+    color: #f0f0f0;
+    text-align: center;
+    -moz-appearance: textfield; /* Remove default spinner for Firefox */
+}
+
+.board-dimensions-control input[type="number"]::-webkit-outer-spin-button,
+.board-dimensions-control input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none; /* Remove default spinner for Chrome, Safari, Edge */
+    margin: 0;
+}
+
+.zoom-control button {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    font-size: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.zoom-control span {
+    min-width: 60px;
+    text-align: center;
+    font-size: 16px;
+}
