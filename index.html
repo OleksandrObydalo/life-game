@@ -25,6 +25,8 @@
         <div class="mode-controls">
             <button id="createModeButton" class="active-mode">Create Cells</button>
             <button id="destroyModeButton">Destroy Cells</button>
+            <button id="copyModeButton">Copy Cells</button>
+            <button id="pasteModeButton">Paste Cells</button>
         </div>
         <div class="speed-control">
             <label for="speedSlider">Speed (ms/frame):</label>
@@ -33,7 +35,7 @@
         </div>
     </div>
     <script type="module">
-        import { initGame, startGame, pauseGame, stepGame, resetGame, setGameSpeed, setEditingMode, handleMouseDown, handleMouseMove, handleMouseUp, GAME_MODE_CREATE, GAME_MODE_DESTROY } from 'game';
+        import { initGame, startGame, pauseGame, stepGame, resetGame, setGameSpeed, setEditingMode, handleMouseDown, handleMouseMove, handleMouseUp, GAME_MODE_CREATE, GAME_MODE_DESTROY, GAME_MODE_COPY, GAME_MODE_PASTE } from 'game';
 
         const canvas = document.getElementById('gameCanvas');
         const startBtn = document.getElementById('startButton');
@@ -44,6 +46,8 @@
         const speedValueSpan = document.getElementById('speedValue');
         const createModeBtn = document.getElementById('createModeButton');
         const destroyModeBtn = document.getElementById('destroyModeButton');
+        const copyModeBtn = document.getElementById('copyModeButton');
+        const pasteModeBtn = document.getElementById('pasteModeButton');
 
         initGame(canvas);
 
@@ -70,16 +74,35 @@
         stepBtn.addEventListener('click', stepGame);
         resetBtn.addEventListener('click', resetGame);
 
+        function deactivateAllModeButtons() {
+            createModeBtn.classList.remove('active-mode');
+            destroyModeBtn.classList.remove('active-mode');
+            copyModeBtn.classList.remove('active-mode');
+            pasteModeBtn.classList.remove('active-mode');
+        }
+
         createModeBtn.addEventListener('click', () => {
             setEditingMode(GAME_MODE_CREATE);
+            deactivateAllModeButtons();
             createModeBtn.classList.add('active-mode');
-            destroyModeBtn.classList.remove('active-mode');
         });
 
         destroyModeBtn.addEventListener('click', () => {
             setEditingMode(GAME_MODE_DESTROY);
+            deactivateAllModeButtons();
             destroyModeBtn.classList.add('active-mode');
-            createModeBtn.classList.remove('active-mode');
+        });
+
+        copyModeBtn.addEventListener('click', () => {
+            setEditingMode(GAME_MODE_COPY);
+            deactivateAllModeButtons();
+            copyModeBtn.classList.add('active-mode');
+        });
+
+        pasteModeBtn.addEventListener('click', () => {
+            setEditingMode(GAME_MODE_PASTE);
+            deactivateAllModeButtons();
+            pasteModeBtn.classList.add('active-mode');
         });
 
         speedSlider.addEventListener('input', (event) => {
