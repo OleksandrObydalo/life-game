@@ -1,7 +1,7 @@
 let CELL_SIZE = 10; // Size of each cell in pixels
 let GRID_WIDTH_CELLS = 70; // Number of cells wide
 let GRID_HEIGHT_CELLS = 50; // Number of cells high
-let CELL_COLOR = '#61dafb'; // Default alive cell color
+let CURRENT_DRAWING_COLOR = '#61dafb'; // Default alive cell color for new cells
 
 // Define min/max values for cell size (zoom)
 const MIN_CELL_SIZE = 5;
@@ -19,6 +19,7 @@ export const GAME_MODE_PASTE = 'paste'; // New mode
 
 let canvas;
 let ctx;
+// grid will now store color strings for alive cells, or 0 for dead cells.
 let grid;
 let animationFrameId; // Not currently used, could be for requestAnimationFrame
 let gameIntervalId;
@@ -31,13 +32,14 @@ let lastDrawnRow = -1; // Stores the row of the last cell drawn during drag
 let lastDrawnCol = -1; // Stores the col of the last cell drawn during drag
 
 // New state variables for copy/paste
-let copyBuffer = null; // Stores the copied 2D array of cells
+let copyBuffer = null; // Stores the copied 2D array of cells (will now store colors or 0)
 let selectionStart = null; // {row, col} of the first click for selection
 let selectionCurrentCorner = null; // {row, col} of the current mouse position (for live preview in copy mode)
 let isSelecting = false;   // True if the user is currently defining a selection rectangle (after first click, before second)
 
 // Function to initialize the grid
 function initGrid() {
+    // Initialize grid with 0 for dead cells.
     grid = Array(GRID_HEIGHT_CELLS).fill(null).map(() => Array(GRID_WIDTH_CELLS).fill(0));
 }
 
@@ -67,8 +69,9 @@ function drawGridLines() {
 function drawCells() {
     for (let row = 0; row < GRID_HEIGHT_CELLS; row++) {
         for (let col = 0; col < GRID_WIDTH_CELLS; col++) {
-            if (grid[row][col] === 1) {
-                ctx.fillStyle = CELL_COLOR; // Use the selected cell color
+            // Check if the cell is alive (i.e., not 0, meaning it holds a color)
+            if (grid[row][col] !== 0) {
+                ctx.fillStyle = grid[row][col]; // Use the cell's specific color
                 ctx.fillRect(col * CELL_SIZE, row * CELL_SIZE, CELL_SIZE, CELL_SIZE);
             } else {
                 ctx.fillStyle = '#1a1e24'; // Dead cell background (matches canvas background)
@@ -84,8 +87,9 @@ function getNextGeneration() {
 
     for (let row = 0; row < GRID_HEIGHT_CELLS; row++) {
         for (let col = 0; col < GRID_WIDTH_CELLS; col++) {
-            const cell = grid[row][col];
+            const cell = grid[row][col]; // Can be a color string or 0
             let liveNeighbors = 0;
+            let neighborColors = []; // To store colors of live neighbors for reproduction
 
             // Check all 8 neighbors
             for (let i = -1; i <= 1; i++) {
@@ -95,24 +99,30 @@ function getNextGeneration() {
                     const neighborRow = row + i;
                     const neighborCol = col + j;
 
-                    // Check bounds
+                    // Check bounds and if neighbor is alive
                     if (neighborRow >= 0 && neighborRow < GRID_HEIGHT_CELLS &&
                         neighborCol >= 0 && neighborCol < GRID_WIDTH_CELLS) {
-                        liveNeighbors += grid[neighborRow][neighborCol];
+                        if (grid[neighborRow][neighborCol] !== 0) { // If neighbor is alive
+                            liveNeighbors++;
+                            neighborColors.push(grid[neighborRow][neighborCol]);
+                        }
                     }
                 }
             }
 
             // Apply Game of Life rules
-            if (cell === 1) { // Live cell
+            if (cell !== 0) { // Live cell (has a color)
                 if (liveNeighbors < 2 || liveNeighbors > 3) {
                     newGrid[row][col] = 0; // Dies (underpopulation or overpopulation)
                 } else {
-                    newGrid[row][col] = 1; // Lives on
+                    newGrid[row][col] = cell; // Lives on, retaining its color
                 }
-            } else { // Dead cell
+            } else { // Dead cell (0)
                 if (liveNeighbors === 3) {
-                    newGrid[row][col] = 1; // Becomes alive (reproduction)
+                    // Becomes alive (reproduction). Inherit color from one of its 3 live neighbors.
+                    // For simplicity, take the color of the first neighbor found.
+                    // If neighborColors has 3 items, they are all live neighbors. Pick any.
+                    newGrid[row][col] = neighborColors[0]; // Assign the color of one of its reproducing neighbors
                 } else {
                     newGrid[row][col] = 0; // Stays dead
                 }
@@ -146,7 +156,7 @@ function draw() {
 function toggleCell(row, col) {
     if (row >= 0 && row < GRID_HEIGHT_CELLS && col >= 0 && col < GRID_WIDTH_CELLS) {
         if (currentEditingMode === GAME_MODE_CREATE) {
-            grid[row][col] = 1; // Set cell to alive
+            grid[row][col] = CURRENT_DRAWING_COLOR; // Set cell to alive with the current drawing color
         } else if (currentEditingMode === GAME_MODE_DESTROY) {
             grid[row][col] = 0; // Set cell to dead
         }
@@ -222,7 +232,7 @@ function copySelection(endPoint) {
             const gridCol = topLeft.col + c;
             // Ensure gridRow and gridCol are within bounds before accessing grid
             if (gridRow >= 0 && gridRow < GRID_HEIGHT_CELLS && gridCol >= 0 && gridCol < GRID_WIDTH_CELLS) {
-                copyBuffer[r][c] = grid[gridRow][gridCol];
+                copyBuffer[r][c] = grid[gridRow][gridCol]; // Copy the color or 0
             } else {
                 // If selection goes out of bounds, treat it as empty cells
                 copyBuffer[r][c] = 0;
@@ -256,7 +266,7 @@ function pasteCells(targetRow, targetCol) {
 
     for (let r = 0; r < bufferRows; r++) {
         for (let c = 0; c < bufferCols; c++) {
-            grid[targetRow + r][targetCol + c] = copyBuffer[r][c];
+            grid[targetRow + r][targetCol + c] = copyBuffer[r][c]; // Paste the color or 0
         }
     }
     draw(); // Redraw the grid after pasting
@@ -517,16 +527,17 @@ export function zoomOut() {
 }
 
 /**
- * Sets the color for alive cells.
+ * Sets the color for newly created alive cells.
  * @param {string} color The new color in a valid CSS format (e.g., '#RRGGBB').
  */
 export function setCellColor(color) {
-    CELL_COLOR = color;
-    draw(); // Redraw the canvas with the new cell color
+    CURRENT_DRAWING_COLOR = color;
+    // No need to redraw all cells immediately as this only affects newly created cells
+    // Existing cells retain their colors as stored in the grid.
 }
 
 /**
- * Returns the current game configuration (cell size, grid dimensions, cell color).
+ * Returns the current game configuration (cell size, grid dimensions, current drawing color).
  * @returns {{cellSize: number, gridWidth: number, gridHeight: number, cellColor: string}}
  */
 export function getGameConfig() {
@@ -534,6 +545,6 @@ export function getGameConfig() {
         cellSize: CELL_SIZE,
         gridWidth: GRID_WIDTH_CELLS,
         gridHeight: GRID_HEIGHT_CELLS,
-        cellColor: CELL_COLOR // Include cell color in config
+        cellColor: CURRENT_DRAWING_COLOR // Now returns the color for new cells
     };
 }
