@@ -1,6 +1,7 @@
 let CELL_SIZE = 10; // Size of each cell in pixels
 let GRID_WIDTH_CELLS = 70; // Number of cells wide
 let GRID_HEIGHT_CELLS = 50; // Number of cells high
+let CELL_COLOR = '#61dafb'; // Default alive cell color
 
 // Define min/max values for cell size (zoom)
 const MIN_CELL_SIZE = 5;
@@ -67,7 +68,7 @@ function drawCells() {
     for (let row = 0; row < GRID_HEIGHT_CELLS; row++) {
         for (let col = 0; col < GRID_WIDTH_CELLS; col++) {
             if (grid[row][col] === 1) {
-                ctx.fillStyle = '#61dafb'; // Alive cell color
+                ctx.fillStyle = CELL_COLOR; // Use the selected cell color
                 ctx.fillRect(col * CELL_SIZE, row * CELL_SIZE, CELL_SIZE, CELL_SIZE);
             } else {
                 ctx.fillStyle = '#1a1e24'; // Dead cell background (matches canvas background)
@@ -516,13 +517,23 @@ export function zoomOut() {
 }
 
 /**
- * Returns the current game configuration (cell size, grid dimensions).
- * @returns {{cellSize: number, gridWidth: number, gridHeight: number}}
+ * Sets the color for alive cells.
+ * @param {string} color The new color in a valid CSS format (e.g., '#RRGGBB').
+ */
+export function setCellColor(color) {
+    CELL_COLOR = color;
+    draw(); // Redraw the canvas with the new cell color
+}
+
+/**
+ * Returns the current game configuration (cell size, grid dimensions, cell color).
+ * @returns {{cellSize: number, gridWidth: number, gridHeight: number, cellColor: string}}
  */
 export function getGameConfig() {
     return {
         cellSize: CELL_SIZE,
         gridWidth: GRID_WIDTH_CELLS,
-        gridHeight: GRID_HEIGHT_CELLS
+        gridHeight: GRID_HEIGHT_CELLS,
+        cellColor: CELL_COLOR // Include cell color in config
     };
 }

@@ -47,9 +47,14 @@
             <span id="cellSizeValue">10px</span>
             <button id="zoomInButton">+</button>
         </div>
+        <!-- New control for cell color -->
+        <div class="color-control">
+            <label for="cellColorPicker">Cell Color:</label>
+            <input type="color" id="cellColorPicker" value="#61dafb">
+        </div>
     </div>
     <script type="module">
-        import { initGame, startGame, pauseGame, stepGame, resetGame, setGameSpeed, setEditingMode, handleMouseDown, handleMouseMove, handleMouseUp, GAME_MODE_CREATE, GAME_MODE_DESTROY, GAME_MODE_COPY, GAME_MODE_PASTE, setGridDimensions, zoomIn, zoomOut, getGameConfig } from 'game';
+        import { initGame, startGame, pauseGame, stepGame, resetGame, setGameSpeed, setEditingMode, handleMouseDown, handleMouseMove, handleMouseUp, GAME_MODE_CREATE, GAME_MODE_DESTROY, GAME_MODE_COPY, GAME_MODE_PASTE, setGridDimensions, zoomIn, zoomOut, getGameConfig, setCellColor } from 'game';
 
         const canvas = document.getElementById('gameCanvas');
         const startBtn = document.getElementById('startButton');
@@ -71,6 +76,9 @@
         const zoomOutBtn = document.getElementById('zoomOutButton');
         const cellSizeValueSpan = document.getElementById('cellSizeValue');
 
+        // New element for color control
+        const cellColorPicker = document.getElementById('cellColorPicker');
+
         initGame(canvas);
 
         // Set initial values for dimension and zoom inputs from game config
@@ -78,6 +86,7 @@
         gridWidthInput.value = initialConfig.gridWidth;
         gridHeightInput.value = initialConfig.gridHeight;
         cellSizeValueSpan.textContent = `${initialConfig.cellSize}px`;
+        cellColorPicker.value = initialConfig.cellColor; // Set initial color picker value
 
         // Event listeners for drawing/erasing cells
         canvas.addEventListener('mousedown', (event) => {
@@ -167,6 +176,11 @@
         zoomOutBtn.addEventListener('click', () => {
             const newSize = zoomOut();
             cellSizeValueSpan.textContent = `${newSize}px`;
+        });
+
+        // Event listener for color picker
+        cellColorPicker.addEventListener('input', (event) => {
+            setCellColor(event.target.value);
         });
     </script>
 </body>
