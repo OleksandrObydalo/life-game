@@ -27,6 +27,7 @@
             <button id="destroyModeButton">Destroy Cells</button>
             <button id="copyModeButton">Copy Cells</button>
             <button id="pasteModeButton">Paste Cells</button>
+            <button id="recolorModeButton">Recolor Cells</button>
         </div>
         <div class="speed-control">
             <label for="speedSlider">Speed (ms/frame):</label>
@@ -54,7 +55,7 @@
         </div>
     </div>
     <script type="module">
-        import { initGame, startGame, pauseGame, stepGame, resetGame, setGameSpeed, setEditingMode, handleMouseDown, handleMouseMove, handleMouseUp, GAME_MODE_CREATE, GAME_MODE_DESTROY, GAME_MODE_COPY, GAME_MODE_PASTE, setGridDimensions, zoomIn, zoomOut, getGameConfig, setCellColor } from 'game';
+        import { initGame, startGame, pauseGame, stepGame, resetGame, setGameSpeed, setEditingMode, handleMouseDown, handleMouseMove, handleMouseUp, GAME_MODE_CREATE, GAME_MODE_DESTROY, GAME_MODE_COPY, GAME_MODE_PASTE, setGridDimensions, zoomIn, zoomOut, getGameConfig, setCellColor, GAME_MODE_RECOLOR } from 'game';
 
         const canvas = document.getElementById('gameCanvas');
         const startBtn = document.getElementById('startButton');
@@ -67,6 +68,7 @@
         const destroyModeBtn = document.getElementById('destroyModeButton');
         const copyModeBtn = document.getElementById('copyModeButton');
         const pasteModeBtn = document.getElementById('pasteModeButton');
+        const recolorModeBtn = document.getElementById('recolorModeButton'); // New button element
 
         // New elements for dimension and zoom controls
         const gridWidthInput = document.getElementById('gridWidth');
@@ -128,6 +130,7 @@
             destroyModeBtn.classList.remove('active-mode');
             copyModeBtn.classList.remove('active-mode');
             pasteModeBtn.classList.remove('active-mode');
+            recolorModeBtn.classList.remove('active-mode'); // Deactivate new button
         }
 
         createModeBtn.addEventListener('click', () => {
@@ -152,6 +155,13 @@
             setEditingMode(GAME_MODE_PASTE);
             deactivateAllModeButtons();
             pasteModeBtn.classList.add('active-mode');
+        });
+        
+        // New event listener for recolor mode button
+        recolorModeBtn.addEventListener('click', () => {
+            setEditingMode(GAME_MODE_RECOLOR);
+            deactivateAllModeButtons();
+            recolorModeBtn.classList.add('active-mode');
         });
 
         speedSlider.addEventListener('input', (event) => {

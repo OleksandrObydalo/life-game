@@ -16,6 +16,7 @@ export const GAME_MODE_CREATE = 'create';
 export const GAME_MODE_DESTROY = 'destroy';
 export const GAME_MODE_COPY = 'copy'; // New mode
 export const GAME_MODE_PASTE = 'paste'; // New mode
+export const GAME_MODE_RECOLOR = 'recolor'; // New mode
 
 let canvas;
 let ctx;
@@ -273,6 +274,33 @@ function pasteCells(targetRow, targetCol) {
 }
 
 /**
+ * Changes the color of live cells within the selected rectangular area to the new color.
+ * @param {{row: number, col: number}} endPoint The actual second corner clicked.
+ * @param {string} newColor The color to apply to the selected live cells.
+ */
+function recolorSelection(endPoint, newColor) {
+    if (!selectionStart || !endPoint) {
+        console.warn("Selection not fully defined for recoloring.");
+        return;
+    }
+
+    const { topLeft, bottomRight } = getMinMaxCorners(selectionStart, endPoint);
+
+    for (let row = topLeft.row; row <= bottomRight.row; row++) {
+        for (let col = topLeft.col; col <= bottomRight.col; col++) {
+            // Ensure gridRow and gridCol are within bounds
+            if (row >= 0 && row < GRID_HEIGHT_CELLS && col >= 0 && col < GRID_WIDTH_CELLS) {
+                if (grid[row][col] !== 0) { // Only change color if the cell is alive
+                    grid[row][col] = newColor;
+                }
+            }
+        }
+    }
+    draw(); // Redraw the grid after recoloring
+    clearSelectionState(); // Clear visual selection
+}
+
+/**
  * Updates the canvas dimensions based on current grid size and cell size, then redraws.
  */
 function updateCanvasDimensionsAndDraw() {
@@ -344,6 +372,19 @@ export function handleMouseDown(x, y) {
                 console.warn("No selection in buffer to paste.");
             }
             break;
+        case GAME_MODE_RECOLOR: // New case for recolor mode
+            if (!isSelecting) {
+                // First click for selection
+                selectionStart = { row, col };
+                selectionCurrentCorner = { row, col }; // Initialize for live preview
+                isSelecting = true;
+                draw(); // Redraw to show initial selection point
+            } else {
+                // Second click for selection
+                recolorSelection({ row, col }, CURRENT_DRAWING_COLOR); // Apply recolor
+                // isSelecting is set to false inside recolorSelection via clearSelectionState
+            }
+            break;
     }
 }
 
@@ -363,7 +404,8 @@ export function handleMouseMove(x, y) {
         if (isDrawing) { // For create/destroy
             isDrawing = false; // Stop drawing when cursor leaves canvas
         }
-        if (currentEditingMode === GAME_MODE_COPY && isSelecting && selectionStart) {
+        // Apply to both copy and recolor modes for live selection preview
+        if ((currentEditingMode === GAME_MODE_COPY || currentEditingMode === GAME_MODE_RECOLOR) && isSelecting && selectionStart) {
             // If dragging selection out of bounds, constrain the current corner for preview
             selectionCurrentCorner = {
                 row: Math.max(0, Math.min(GRID_HEIGHT_CELLS - 1, row)),
@@ -387,6 +429,7 @@ export function handleMouseMove(x, y) {
             }
             break;
         case GAME_MODE_COPY:
+        case GAME_MODE_RECOLOR: // Apply live preview to recolor mode as well
             if (isSelecting && selectionStart) {
                 // Update selectionCurrentCorner for live preview
                 selectionCurrentCorner = { row, col };
@@ -416,7 +459,7 @@ export function handleMouseUp() {
  * @param {string} mode The mode to set.
  */
 export function setEditingMode(mode) {
-    if ([GAME_MODE_CREATE, GAME_MODE_DESTROY, GAME_MODE_COPY, GAME_MODE_PASTE].includes(mode)) {
+    if ([GAME_MODE_CREATE, GAME_MODE_DESTROY, GAME_MODE_COPY, GAME_MODE_PASTE, GAME_MODE_RECOLOR].includes(mode)) {
         currentEditingMode = mode;
         isDrawing = false; // Stop any ongoing drawing
 
