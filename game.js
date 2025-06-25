@@ -144,8 +144,8 @@ function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the entire canvas
     drawCells(); // Draw filled cells first
     drawGridLines(); // Draw grid lines on top
-    if (currentEditingMode === GAME_MODE_COPY && isSelecting && selectionStart && selectionCurrentCorner) {
-        drawSelectionBox(); // Draw selection box if in copy mode and selecting
+    if ((currentEditingMode === GAME_MODE_COPY || currentEditingMode === GAME_MODE_RECOLOR) && isSelecting && selectionStart && selectionCurrentCorner) {
+        drawSelectionBox(); // Draw selection box if in copy mode or recolor mode and selecting
     }
 }
 
