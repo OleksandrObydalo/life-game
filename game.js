@@ -2,7 +2,10 @@ let CELL_SIZE = 10; // Size of each cell in pixels
 let GRID_WIDTH_CELLS = 70; // Number of cells wide
 let GRID_HEIGHT_CELLS = 50; // Number of cells high
 let CURRENT_DRAWING_COLOR = '#61dafb'; // Default alive cell color for new cells
-let MUTATION_SPEED = 0; // New parameter: 0-50 range, affects H, S, L mutation on reproduction
+let MUTATION_H_S_SPEED = 0; // New parameter: 0-50 range, affects H, S mutation on reproduction
+let MUTATION_L_SPEED = 0; // New parameter: 0-50 range, affects L mutation on reproduction
+
+const LIGHTNESS_DEATH_THRESHOLD = 5; // Lightness value below which a cell dies (0-100)
 
 // Define min/max values for cell size (zoom)
 const MIN_CELL_SIZE = 5;
@@ -194,25 +197,36 @@ function getNextGeneration() {
                     // Check if all three neighbors have the same color for mutation
                     const uniqueNeighborColors = new Set(neighborColors);
                     
-                    if (uniqueNeighborColors.size === 1 && MUTATION_SPEED > 0) {
+                    if (uniqueNeighborColors.size === 1 && (MUTATION_H_S_SPEED > 0 || MUTATION_L_SPEED > 0)) {
                         const baseColorHex = uniqueNeighborColors.values().next().value;
                         const rgb = hexToRgb(baseColorHex);
                         let { h, s, l } = rgbToHsl(rgb.r, rgb.g, rgb.b);
 
-                        // Apply mutation
                         const randomMutation = (maxRange) => (Math.random() * 2 * maxRange) - maxRange;
 
-                        h = h + randomMutation(MUTATION_SPEED);
-                        s = s + randomMutation(MUTATION_SPEED);
-                        l = l + randomMutation(MUTATION_SPEED);
-
+                        // Apply H and S mutation
+                        if (MUTATION_H_S_SPEED > 0) {
+                            h = h + randomMutation(MUTATION_H_S_SPEED);
+                            s = s + randomMutation(MUTATION_H_S_SPEED);
+                        }
+                        
+                        // Apply L mutation
+                        if (MUTATION_L_SPEED > 0) {
+                            l = l + randomMutation(MUTATION_L_SPEED);
+                        }
+                        
                         // Clamp HSL values to valid ranges
                         h = (h % 360 + 360) % 360; // Ensure H is always positive and within 0-360
                         s = Math.max(0, Math.min(100, s));
                         l = Math.max(0, Math.min(100, l));
 
-                        const mutatedRgb = hslToRgb(h, s, l);
-                        newGrid[row][col] = rgbToHex(mutatedRgb.r, mutatedRgb.g, mutatedRgb.b);
+                        // Check for death by low brightness
+                        if (l < LIGHTNESS_DEATH_THRESHOLD) {
+                            newGrid[row][col] = 0; // Cell dies due to low brightness
+                        } else {
+                            const mutatedRgb = hslToRgb(h, s, l);
+                            newGrid[row][col] = rgbToHex(mutatedRgb.r, mutatedRgb.g, mutatedRgb.b);
+                        }
                     } else {
                         // If mutation speed is 0 or neighbors have different colors,
                         // new cell inherits color from the first live neighbor found.
@@ -249,7 +263,7 @@ function draw() {
  * @param {number} col The column index of the cell.
  */
 function toggleCell(row, col) {
-    if (row >= 0 && row < GRID_HEIGHT_CELLS && col >= 0 && col < GRID_WIDTH_CELLS) {
+    if (row >= 0 && row < GRID_HEIGHT_CELLS && col < GRID_WIDTH_CELLS && col >= 0) {
         if (currentEditingMode === GAME_MODE_CREATE) {
             grid[row][col] = CURRENT_DRAWING_COLOR; // Set cell to alive with the current drawing color
         } else if (currentEditingMode === GAME_MODE_DESTROY) {
@@ -621,11 +635,19 @@ export function setGameSpeed(newSpeedMs) {
 }
 
 /**
- * Sets the mutation speed for new cell reproduction.
+ * Sets the hue and saturation mutation speed for new cell reproduction.
  * @param {number} newMutationSpeed The new mutation speed (0-50).
  */
-export function setMutationSpeed(newMutationSpeed) {
-    MUTATION_SPEED = newMutationSpeed;
+export function setMutationHueSatSpeed(newMutationSpeed) {
+    MUTATION_H_S_SPEED = newMutationSpeed;
+}
+
+/**
+ * Sets the lightness mutation speed for new cell reproduction.
+ * @param {number} newMutationSpeed The new mutation speed (0-50).
+ */
+export function setMutationLightnessSpeed(newMutationSpeed) {
+    MUTATION_L_SPEED = newMutationSpeed;
 }
 
 /**
@@ -682,8 +704,8 @@ export function setCellColor(color) {
 }
 
 /**
- * Returns the current game configuration (cell size, grid dimensions, current drawing color, mutation speed).
- * @returns {{cellSize: number, gridWidth: number, gridHeight: number, cellColor: string, mutationSpeed: number}}
+ * Returns the current game configuration (cell size, grid dimensions, current drawing color, mutation speeds).
+ * @returns {{cellSize: number, gridWidth: number, gridHeight: number, cellColor: string, mutationHueSatSpeed: number, mutationLightnessSpeed: number}}
  */
 export function getGameConfig() {
     return {
@@ -691,6 +713,7 @@ export function getGameConfig() {
         gridWidth: GRID_WIDTH_CELLS,
         gridHeight: GRID_HEIGHT_CELLS,
         cellColor: CURRENT_DRAWING_COLOR,
-        mutationSpeed: MUTATION_SPEED // Include mutation speed in config
+        mutationHueSatSpeed: MUTATION_H_S_SPEED,
+        mutationLightnessSpeed: MUTATION_L_SPEED
     };
 }
