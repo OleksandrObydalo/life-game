@@ -2,6 +2,7 @@ let CELL_SIZE = 10; // Size of each cell in pixels
 let GRID_WIDTH_CELLS = 70; // Number of cells wide
 let GRID_HEIGHT_CELLS = 50; // Number of cells high
 let CURRENT_DRAWING_COLOR = '#61dafb'; // Default alive cell color for new cells
+let MUTATION_SPEED = 0; // New parameter: 0-50 range, affects H, S, L mutation on reproduction
 
 // Define min/max values for cell size (zoom)
 const MIN_CELL_SIZE = 5;
@@ -37,6 +38,76 @@ let copyBuffer = null; // Stores the copied 2D array of cells (will now store co
 let selectionStart = null; // {row, col} of the first click for selection
 let selectionCurrentCorner = null; // {row, col} of the current mouse position (for live preview in copy mode)
 let isSelecting = false;   // True if the user is currently defining a selection rectangle (after first click, before second)
+
+// Helper functions for color conversion (Hex <-> RGB <-> HSL)
+function hexToRgb(hex) {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return { r, g, b };
+}
+
+function rgbToHsl(r, g, b) {
+    r /= 255;
+    g /= 255;
+    b /= 255;
+
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    let h, s, l = (max + min) / 2;
+
+    if (max === min) {
+        h = s = 0; // achromatic
+    } else {
+        const d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        switch (max) {
+            case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+            case g: h = (b - r) / d + 2; break;
+            case b: h = (r - g) / d + 4; break;
+        }
+        h /= 6;
+    }
+
+    return { h: h * 360, s: s * 100, l: l * 100 };
+}
+
+function hslToRgb(h, s, l) {
+    h /= 360;
+    s /= 100;
+    l /= 100;
+
+    let r, g, b;
+
+    if (s === 0) {
+        r = g = b = l; // achromatic
+    } else {
+        const hue2rgb = (p, q, t) => {
+            if (t < 0) t += 1;
+            if (t > 1) t -= 1;
+            if (t < 1 / 6) return p + (q - p) * 6 * t;
+            if (t < 1 / 2) return q;
+            if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+            return p;
+        };
+
+        const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        const p = 2 * l - q;
+        r = hue2rgb(p, q, h + 1 / 3);
+        g = hue2rgb(p, q, h);
+        b = hue2rgb(p, q, h - 1 / 3);
+    }
+
+    return { r: Math.round(r * 255), g: Math.round(g * 255), b: Math.round(b * 255) };
+}
+
+function rgbToHex(r, g, b) {
+    const toHex = (c) => {
+        const hex = Math.round(c).toString(16);
+        return hex.length === 1 ? "0" + hex : hex;
+    };
+    return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+}
 
 // Function to initialize the grid
 function initGrid() {
@@ -120,10 +191,33 @@ function getNextGeneration() {
                 }
             } else { // Dead cell (0)
                 if (liveNeighbors === 3) {
-                    // Becomes alive (reproduction). Inherit color from one of its 3 live neighbors.
-                    // For simplicity, take the color of the first neighbor found.
-                    // If neighborColors has 3 items, they are all live neighbors. Pick any.
-                    newGrid[row][col] = neighborColors[0]; // Assign the color of one of its reproducing neighbors
+                    // Check if all three neighbors have the same color for mutation
+                    const uniqueNeighborColors = new Set(neighborColors);
+                    
+                    if (uniqueNeighborColors.size === 1 && MUTATION_SPEED > 0) {
+                        const baseColorHex = uniqueNeighborColors.values().next().value;
+                        const rgb = hexToRgb(baseColorHex);
+                        let { h, s, l } = rgbToHsl(rgb.r, rgb.g, rgb.b);
+
+                        // Apply mutation
+                        const randomMutation = (maxRange) => (Math.random() * 2 * maxRange) - maxRange;
+
+                        h = h + randomMutation(MUTATION_SPEED);
+                        s = s + randomMutation(MUTATION_SPEED);
+                        l = l + randomMutation(MUTATION_SPEED);
+
+                        // Clamp HSL values to valid ranges
+                        h = (h % 360 + 360) % 360; // Ensure H is always positive and within 0-360
+                        s = Math.max(0, Math.min(100, s));
+                        l = Math.max(0, Math.min(100, l));
+
+                        const mutatedRgb = hslToRgb(h, s, l);
+                        newGrid[row][col] = rgbToHex(mutatedRgb.r, mutatedRgb.g, mutatedRgb.b);
+                    } else {
+                        // If mutation speed is 0 or neighbors have different colors,
+                        // new cell inherits color from the first live neighbor found.
+                        newGrid[row][col] = neighborColors[0];
+                    }
                 } else {
                     newGrid[row][col] = 0; // Stays dead
                 }
@@ -527,6 +621,14 @@ export function setGameSpeed(newSpeedMs) {
 }
 
 /**
+ * Sets the mutation speed for new cell reproduction.
+ * @param {number} newMutationSpeed The new mutation speed (0-50).
+ */
+export function setMutationSpeed(newMutationSpeed) {
+    MUTATION_SPEED = newMutationSpeed;
+}
+
+/**
  * Sets the width and height of the game board.
  * Resets the grid and redraws the canvas.
  * @param {number} newWidth The new width in cells.
@@ -580,14 +682,15 @@ export function setCellColor(color) {
 }
 
 /**
- * Returns the current game configuration (cell size, grid dimensions, current drawing color).
- * @returns {{cellSize: number, gridWidth: number, gridHeight: number, cellColor: string}}
+ * Returns the current game configuration (cell size, grid dimensions, current drawing color, mutation speed).
+ * @returns {{cellSize: number, gridWidth: number, gridHeight: number, cellColor: string, mutationSpeed: number}}
  */
 export function getGameConfig() {
     return {
         cellSize: CELL_SIZE,
         gridWidth: GRID_WIDTH_CELLS,
         gridHeight: GRID_HEIGHT_CELLS,
-        cellColor: CURRENT_DRAWING_COLOR // Now returns the color for new cells
+        cellColor: CURRENT_DRAWING_COLOR,
+        mutationSpeed: MUTATION_SPEED // Include mutation speed in config
     };
 }

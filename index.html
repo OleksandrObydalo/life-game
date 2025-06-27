@@ -34,6 +34,12 @@
             <input type="range" id="speedSlider" min="20" max="1000" value="100" step="10">
             <span id="speedValue">100</span>
         </div>
+        <!-- New control for mutation speed -->
+        <div class="speed-control">
+            <label for="mutationSpeedSlider">Mutation Speed (HSL):</label>
+            <input type="range" id="mutationSpeedSlider" min="0" max="50" value="0" step="1">
+            <span id="mutationSpeedValue">0</span>
+        </div>
         <!-- New controls for board dimensions -->
         <div class="board-dimensions-control">
             <label for="gridWidth">Width:</label>
@@ -55,7 +61,7 @@
         </div>
     </div>
     <script type="module">
-        import { initGame, startGame, pauseGame, stepGame, resetGame, setGameSpeed, setEditingMode, handleMouseDown, handleMouseMove, handleMouseUp, GAME_MODE_CREATE, GAME_MODE_DESTROY, GAME_MODE_COPY, GAME_MODE_PASTE, setGridDimensions, zoomIn, zoomOut, getGameConfig, setCellColor, GAME_MODE_RECOLOR } from 'game';
+        import { initGame, startGame, pauseGame, stepGame, resetGame, setGameSpeed, setEditingMode, handleMouseDown, handleMouseMove, handleMouseUp, GAME_MODE_CREATE, GAME_MODE_DESTROY, GAME_MODE_COPY, GAME_MODE_PASTE, setGridDimensions, zoomIn, zoomOut, getGameConfig, setCellColor, GAME_MODE_RECOLOR, setMutationSpeed } from 'game';
 
         const canvas = document.getElementById('gameCanvas');
         const startBtn = document.getElementById('startButton');
@@ -68,7 +74,7 @@
         const destroyModeBtn = document.getElementById('destroyModeButton');
         const copyModeBtn = document.getElementById('copyModeButton');
         const pasteModeBtn = document.getElementById('pasteModeButton');
-        const recolorModeBtn = document.getElementById('recolorModeButton'); // New button element
+        const recolorModeBtn = document.getElementById('recolorModeButton');
 
         // New elements for dimension and zoom controls
         const gridWidthInput = document.getElementById('gridWidth');
@@ -81,14 +87,20 @@
         // New element for color control
         const cellColorPicker = document.getElementById('cellColorPicker');
 
+        // New elements for mutation speed control
+        const mutationSpeedSlider = document.getElementById('mutationSpeedSlider');
+        const mutationSpeedValueSpan = document.getElementById('mutationSpeedValue');
+
         initGame(canvas);
 
-        // Set initial values for dimension and zoom inputs from game config
+        // Set initial values for dimension, zoom, color and mutation inputs from game config
         const initialConfig = getGameConfig();
         gridWidthInput.value = initialConfig.gridWidth;
         gridHeightInput.value = initialConfig.gridHeight;
         cellSizeValueSpan.textContent = `${initialConfig.cellSize}px`;
-        cellColorPicker.value = initialConfig.cellColor; // Set initial color picker value
+        cellColorPicker.value = initialConfig.cellColor;
+        mutationSpeedSlider.value = initialConfig.mutationSpeed;
+        mutationSpeedValueSpan.textContent = initialConfig.mutationSpeed;
 
         // Event listeners for drawing/erasing cells
         canvas.addEventListener('mousedown', (event) => {
@@ -130,7 +142,7 @@
             destroyModeBtn.classList.remove('active-mode');
             copyModeBtn.classList.remove('active-mode');
             pasteModeBtn.classList.remove('active-mode');
-            recolorModeBtn.classList.remove('active-mode'); // Deactivate new button
+            recolorModeBtn.classList.remove('active-mode');
         }
 
         createModeBtn.addEventListener('click', () => {
@@ -157,7 +169,6 @@
             pasteModeBtn.classList.add('active-mode');
         });
         
-        // New event listener for recolor mode button
         recolorModeBtn.addEventListener('click', () => {
             setEditingMode(GAME_MODE_RECOLOR);
             deactivateAllModeButtons();
@@ -168,6 +179,13 @@
             const newSpeed = parseInt(event.target.value, 10);
             speedValueSpan.textContent = newSpeed;
             setGameSpeed(newSpeed);
+        });
+
+        // Event listener for mutation speed slider
+        mutationSpeedSlider.addEventListener('input', (event) => {
+            const newMutationSpeed = parseInt(event.target.value, 10);
+            mutationSpeedValueSpan.textContent = newMutationSpeed;
+            setMutationSpeed(newMutationSpeed);
         });
 
         // Event listeners for new dimension and zoom controls
