@@ -704,6 +704,51 @@ export function setCellColor(color) {
 }
 
 /**
+ * Saves the current game board state to a CSV file and triggers a download.
+ */
+export function saveBoard() {
+    // Pause the game if it's running, so the state doesn't change during save
+    const wasRunning = isRunning;
+    if (wasRunning) {
+        pauseGame();
+    }
+
+    const csvRows = [];
+    for (let r = 0; r < GRID_HEIGHT_CELLS; r++) {
+        const rowData = [];
+        for (let c = 0; c < GRID_WIDTH_CELLS; c++) {
+            // If the cell is dead (0), use "DEAD". Otherwise, use its hex color.
+            rowData.push(grid[r][c] === 0 ? 'DEAD' : grid[r][c]);
+        }
+        csvRows.push(rowData.join(','));
+    }
+
+    const csvString = csvRows.join('\n');
+    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    
+    // Create a URL for the Blob and set it as the download link's href
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'game_of_life_board.csv');
+    link.style.visibility = 'hidden'; // Make the link invisible
+    document.body.appendChild(link); // Append to body to make it clickable
+
+    link.click(); // Programmatically click the link to trigger download
+
+    // Clean up: remove the link and revoke the object URL after a short delay
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    console.log("Game board saved to game_of_life_board.csv");
+
+    // Resume the game if it was running before saving
+    if (wasRunning) {
+        startGame();
+    }
+}
+
+/**
  * Returns the current game configuration (cell size, grid dimensions, current drawing color, mutation speeds).
  * @returns {{cellSize: number, gridWidth: number, gridHeight: number, cellColor: string, mutationHueSatSpeed: number, mutationLightnessSpeed: number}}
  */
