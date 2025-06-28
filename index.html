@@ -22,6 +22,8 @@
             <button id="stepButton">Next Step</button>
             <button id="resetButton">Clear</button>
             <button id="saveButton">Save Board</button>
+            <button id="loadButton">Load Board</button>
+            <input type="file" id="fileInput" accept=".csv" style="display: none;">
         </div>
         <div class="mode-controls">
             <button id="createModeButton" class="active-mode">Create Cells</button>
@@ -68,7 +70,7 @@
         </div>
     </div>
     <script type="module">
-        import { initGame, startGame, pauseGame, stepGame, resetGame, setGameSpeed, setEditingMode, handleMouseDown, handleMouseMove, handleMouseUp, GAME_MODE_CREATE, GAME_MODE_DESTROY, GAME_MODE_COPY, GAME_MODE_PASTE, setGridDimensions, zoomIn, zoomOut, getGameConfig, setCellColor, GAME_MODE_RECOLOR, setMutationHueSatSpeed, setMutationLightnessSpeed, saveBoard } from 'game';
+        import { initGame, startGame, pauseGame, stepGame, resetGame, setGameSpeed, setEditingMode, handleMouseDown, handleMouseMove, handleMouseUp, GAME_MODE_CREATE, GAME_MODE_DESTROY, GAME_MODE_COPY, GAME_MODE_PASTE, setGridDimensions, zoomIn, zoomOut, getGameConfig, setCellColor, GAME_MODE_RECOLOR, setMutationHueSatSpeed, setMutationLightnessSpeed, saveBoard, loadBoard } from 'game';
 
         const canvas = document.getElementById('gameCanvas');
         const startBtn = document.getElementById('startButton');
@@ -76,6 +78,8 @@
         const stepBtn = document.getElementById('stepButton');
         const resetBtn = document.getElementById('resetButton');
         const saveBtn = document.getElementById('saveButton');
+        const loadBtn = document.getElementById('loadButton');
+        const fileInput = document.getElementById('fileInput');
         const speedSlider = document.getElementById('speedSlider');
         const speedValueSpan = document.getElementById('speedValue');
         const createModeBtn = document.getElementById('createModeButton');
@@ -149,6 +153,29 @@
         stepBtn.addEventListener('click', stepGame);
         resetBtn.addEventListener('click', resetGame);
         saveBtn.addEventListener('click', saveBoard);
+
+        // New: Load board functionality
+        loadBtn.addEventListener('click', () => {
+            fileInput.click(); // Programmatically click the hidden file input
+        });
+
+        fileInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const csvContent = e.target.result;
+                    loadBoard(csvContent);
+                    // Update dimensions inputs after loading a board with potentially new dimensions
+                    const currentConfig = getGameConfig();
+                    gridWidthInput.value = currentConfig.gridWidth;
+                    gridHeightInput.value = currentConfig.gridHeight;
+                };
+                reader.readAsText(file);
+            }
+            // Clear the file input's value so that selecting the same file again triggers change event
+            event.target.value = '';
+        });
 
         function deactivateAllModeButtons() {
             createModeBtn.classList.remove('active-mode');

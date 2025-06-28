@@ -749,6 +749,63 @@ export function saveBoard() {
 }
 
 /**
+ * Loads a game board state from a CSV content string.
+ * @param {string} csvContent The CSV string representing the board.
+ */
+export function loadBoard(csvContent) {
+    const wasRunning = isRunning;
+    if (wasRunning) {
+        pauseGame();
+    }
+
+    try {
+        const rows = csvContent.trim().split('\n');
+        if (rows.length === 0) {
+            console.warn("CSV content is empty.");
+            return;
+        }
+
+        const newLoadedGrid = [];
+        let newWidth = 0;
+
+        for (const rowString of rows) {
+            const cells = rowString.split(',');
+            if (newWidth === 0) {
+                newWidth = cells.length; // Determine width from the first row
+            } else if (cells.length !== newWidth) {
+                console.warn("CSV rows have inconsistent lengths. Loading may be incorrect.");
+                // We'll proceed, but the board might look odd if it's not rectangular
+            }
+            
+            const newRow = cells.map(cell => cell.trim() === 'DEAD' ? 0 : cell.trim());
+            newLoadedGrid.push(newRow);
+        }
+
+        const newHeight = newLoadedGrid.length;
+
+        // Update global grid dimensions to match the loaded board
+        GRID_WIDTH_CELLS = newWidth;
+        GRID_HEIGHT_CELLS = newHeight;
+        grid = newLoadedGrid; // Replace current grid with the loaded one
+
+        updateCanvasDimensionsAndDraw(); // Update canvas dimensions and redraw the loaded grid
+        copyBuffer = null; // Clear copy buffer as the board has fundamentally changed
+        clearSelectionState(); // Clear any active selection state
+
+        console.log(`Game board loaded from CSV. New dimensions: ${GRID_WIDTH_CELLS}x${GRID_HEIGHT_CELLS}`);
+    } catch (error) {
+        console.error("Error loading board from CSV:", error);
+        alert("Failed to load board. Please ensure the file is a valid game board CSV.");
+        // Revert to initial state or clear if loading failed severely
+        resetGame(); 
+    } finally {
+        if (wasRunning) {
+            startGame();
+        }
+    }
+}
+
+/**
  * Returns the current game configuration (cell size, grid dimensions, current drawing color, mutation speeds).
  * @returns {{cellSize: number, gridWidth: number, gridHeight: number, cellColor: string, mutationHueSatSpeed: number, mutationLightnessSpeed: number}}
  */
