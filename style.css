@@ -203,3 +203,23 @@ button.active-mode {
     border: 2px solid #61dafb;
     border-radius: 5px;
 }
+
+/* Styles for new step counters */
+.step-counters {
+    margin-top: 20px;
+    display: flex;
+    gap: 20px; /* Space between the two counters */
+    font-size: 1.1em;
+    color: #f0f0f0;
+}
+
+.step-counters span {
+    display: inline-flex;
+    align-items: center;
+}
+
+.step-counters span span { /* For the actual number values */
+    font-weight: bold;
+    color: #61dafb; /* Highlight color for numbers */
+    margin-left: 5px;
+}

@@ -212,7 +212,6 @@ function getNextGeneration() {
                         // Apply H and S mutation
                         if (MUTATION_H_S_SPEED > 0) {
                             h = h + randomMutation(MUTATION_H_S_SPEED);
-                            s = s + randomMutation(MUTATION_H_S_SPEED);
                         }
                         
                         // Apply L mutation
@@ -443,12 +442,8 @@ function addStateToHistory() {
     // Trim history if it exceeds max length
     if (gameHistory.length > MAX_HISTORY_LENGTH) {
         gameHistory.shift(); // Remove the oldest state
-    } else {
-        historyPointer++; // Only increment if we added a new state at the end
     }
-    // If length > MAX_HISTORY_LENGTH, pointer remains at MAX_HISTORY_LENGTH - 1
-    // If length <= MAX_HISTORY_LENGTH, pointer is always gameHistory.length - 1
-    // Simplifies to: historyPointer = gameHistory.length - 1;
+    // Update pointer to point to the newly added state
     historyPointer = gameHistory.length - 1;
 }
 
@@ -463,7 +458,7 @@ export function initGame(canvasElement) {
     ctx = canvas.getContext('2d');
 
     initGrid(); // Initialize grid with default dimensions
-    addStateToHistory(); // Save the initial empty state
+    addStateToHistory(); // Save the initial empty state (step 1)
     updateCanvasDimensionsAndDraw(); // Set initial canvas size and draw
 }
 
@@ -870,7 +865,8 @@ export function goBackInHistory() {
 
 /**
  * Returns the current game configuration (cell size, grid dimensions, current drawing color, mutation speeds).
- * @returns {{cellSize: number, gridWidth: number, gridHeight: number, cellColor: string, mutationHueSatSpeed: number, mutationLightnessSpeed: number}}
+ * Includes current history step and total history states.
+ * @returns {{cellSize: number, gridWidth: number, gridHeight: number, cellColor: string, mutationHueSatSpeed: number, mutationLightnessSpeed: number, currentHistoryStep: number, maxHistorySteps: number}}
  */
 export function getGameConfig() {
     return {
@@ -879,6 +875,8 @@ export function getGameConfig() {
         gridHeight: GRID_HEIGHT_CELLS,
         cellColor: CURRENT_DRAWING_COLOR,
         mutationHueSatSpeed: MUTATION_H_S_SPEED,
-        mutationLightnessSpeed: MUTATION_L_SPEED
+        mutationLightnessSpeed: MUTATION_L_SPEED,
+        currentHistoryStep: historyPointer + 1, // 1-indexed current step
+        maxHistorySteps: gameHistory.length // Total states stored
     };
 }

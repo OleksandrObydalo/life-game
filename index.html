@@ -69,6 +69,11 @@
             <label for="cellColorPicker">Cell Color:</label>
             <input type="color" id="cellColorPicker" value="#61dafb">
         </div>
+        <!-- New counters for step and history -->
+        <div class="step-counters">
+            <span>Current Step: <span id="currentStepValue">0</span></span>
+            <span>Total History States: <span id="totalHistoryStatesValue">0</span></span>
+        </div>
     </div>
     <script type="module">
         import { initGame, startGame, pauseGame, stepGame, resetGame, setGameSpeed, setEditingMode, handleMouseDown, handleMouseMove, handleMouseUp, GAME_MODE_CREATE, GAME_MODE_DESTROY, GAME_MODE_COPY, GAME_MODE_PASTE, setGridDimensions, zoomIn, zoomOut, getGameConfig, setCellColor, GAME_MODE_RECOLOR, setMutationHueSatSpeed, setMutationLightnessSpeed, saveBoard, loadBoard, goBackInHistory } from 'game';
@@ -107,18 +112,36 @@
         const brightnessMutationSpeedSlider = document.getElementById('brightnessMutationSpeedSlider');
         const brightnessMutationSpeedValueSpan = document.getElementById('brightnessMutationSpeedValue');
 
-        initGame(canvas);
+        // New elements for step counters
+        const currentStepValueSpan = document.getElementById('currentStepValue');
+        const totalHistoryStatesValueSpan = document.getElementById('totalHistoryStatesValue');
 
-        // Set initial values for dimension, zoom, color and mutation inputs from game config
-        const initialConfig = getGameConfig();
-        gridWidthInput.value = initialConfig.gridWidth;
-        gridHeightInput.value = initialConfig.gridHeight;
-        cellSizeValueSpan.textContent = `${initialConfig.cellSize}px`;
-        cellColorPicker.value = initialConfig.cellColor;
-        hueSatMutationSpeedSlider.value = initialConfig.mutationHueSatSpeed;
-        hueSatMutationSpeedValueSpan.textContent = initialConfig.mutationHueSatSpeed;
-        brightnessMutationSpeedSlider.value = initialConfig.mutationLightnessSpeed;
-        brightnessMutationSpeedValueSpan.textContent = initialConfig.mutationLightnessSpeed;
+        function updateUI() {
+            const config = getGameConfig();
+
+            // Update board dimension inputs
+            gridWidthInput.value = config.gridWidth;
+            gridHeightInput.value = config.gridHeight;
+
+            // Update zoom display
+            cellSizeValueSpan.textContent = `${config.cellSize}px`;
+
+            // Update color picker
+            cellColorPicker.value = config.cellColor;
+
+            // Update mutation speed sliders
+            hueSatMutationSpeedSlider.value = config.mutationHueSatSpeed;
+            hueSatMutationSpeedValueSpan.textContent = config.mutationHueSatSpeed;
+            brightnessMutationSpeedSlider.value = config.mutationLightnessSpeed;
+            brightnessMutationSpeedValueSpan.textContent = config.mutationLightnessSpeed;
+
+            // Update step counters
+            currentStepValueSpan.textContent = config.currentHistoryStep;
+            totalHistoryStatesValueSpan.textContent = config.maxHistorySteps;
+        }
+
+        initGame(canvas);
+        updateUI(); // Initial UI update
 
         // Event listeners for drawing/erasing cells
         canvas.addEventListener('mousedown', (event) => {
@@ -126,6 +149,10 @@
             const x = event.clientX - rect.left;
             const y = event.clientY - rect.top;
             handleMouseDown(x, y);
+            // If mouse down resulted in a state change (create/destroy/paste/recolor), update UI
+            // For create/destroy, the state is added to history on first click. For paste/recolor, immediately.
+            // This is handled implicitly by handleMouseDown calling draw() and then we call updateUI.
+            updateUI();
         });
 
         canvas.addEventListener('mousemove', (event) => {
@@ -133,27 +160,38 @@
             const x = event.clientX - rect.left;
             const y = event.clientY - rect.top;
             handleMouseMove(x, y);
+            // If mouse move resulted in cell changes (continuous draw), update UI
+            // The game.js draw() function is called by handleMouseMove. Let's rely on event listeners.
         });
 
         // Use document for mouseup to ensure release is caught even if mouse leaves canvas
-        document.addEventListener('mouseup', handleMouseUp);
+        document.addEventListener('mouseup', () => {
+            handleMouseUp();
+            // MouseUp ends a drawing operation, and the final state is in history, so update UI.
+            updateUI();
+        });
 
         // New: Wheel event listener for zoom
         canvas.addEventListener('wheel', (event) => {
             event.preventDefault(); // Prevent page scrolling
-            let newSize;
             if (event.deltaY < 0) { // Scroll up (zoom in)
-                newSize = zoomIn();
+                zoomIn();
             } else { // Scroll down (zoom out)
-                newSize = zoomOut();
+                zoomOut();
             }
-            cellSizeValueSpan.textContent = `${newSize}px`;
+            updateUI(); // Update UI after zoom
         });
 
-        startBtn.addEventListener('click', startGame);
+        startBtn.addEventListener('click', startGame); // startGame itself does not change step, but subsequent updates will
         pauseBtn.addEventListener('click', pauseGame);
-        stepBtn.addEventListener('click', stepGame);
-        resetBtn.addEventListener('click', resetGame);
+        stepBtn.addEventListener('click', () => {
+            stepGame();
+            updateUI(); // Update UI after stepping
+        });
+        resetBtn.addEventListener('click', () => {
+            resetGame();
+            updateUI(); // Update UI after reset
+        });
         saveBtn.addEventListener('click', saveBoard);
 
         // New: Load board functionality
@@ -168,10 +206,7 @@
                 reader.onload = (e) => {
                     const csvContent = e.target.result;
                     loadBoard(csvContent);
-                    // Update dimensions inputs after loading a board with potentially new dimensions
-                    const currentConfig = getGameConfig();
-                    gridWidthInput.value = currentConfig.gridWidth;
-                    gridHeightInput.value = currentConfig.gridHeight;
+                    updateUI(); // Update UI after loading a board
                 };
                 reader.readAsText(file);
             }
@@ -217,12 +252,16 @@
             recolorModeBtn.classList.add('active-mode');
         });
 
-        undoBtn.addEventListener('click', goBackInHistory); // New: Undo button listener
+        undoBtn.addEventListener('click', () => {
+            goBackInHistory();
+            updateUI(); // Update UI after undo
+        });
 
         speedSlider.addEventListener('input', (event) => {
             const newSpeed = parseInt(event.target.value, 10);
             speedValueSpan.textContent = newSpeed;
             setGameSpeed(newSpeed);
+            // No updateUI needed here as only speed changes, not game state or history
         });
 
         // Event listener for hue/saturation mutation speed slider
@@ -230,6 +269,7 @@
             const newMutationSpeed = parseInt(event.target.value, 10);
             hueSatMutationSpeedValueSpan.textContent = newMutationSpeed;
             setMutationHueSatSpeed(newMutationSpeed);
+            updateUI(); // Update UI to reflect new config value
         });
 
         // Event listener for brightness mutation speed slider
@@ -237,6 +277,7 @@
             const newMutationSpeed = parseInt(event.target.value, 10);
             brightnessMutationSpeedValueSpan.textContent = newMutationSpeed;
             setMutationLightnessSpeed(newMutationSpeed);
+            updateUI(); // Update UI to reflect new config value
         });
 
         // Event listeners for new dimension and zoom controls
@@ -244,22 +285,23 @@
             const width = parseInt(gridWidthInput.value, 10);
             const height = parseInt(gridHeightInput.value, 10);
             setGridDimensions(width, height);
-            // After changing dimensions, the cell size display remains the same as it's not changed
+            updateUI(); // Update UI after changing dimensions
         });
 
         zoomInBtn.addEventListener('click', () => {
-            const newSize = zoomIn();
-            cellSizeValueSpan.textContent = `${newSize}px`;
+            zoomIn();
+            updateUI(); // Update UI after zoom
         });
 
         zoomOutBtn.addEventListener('click', () => {
-            const newSize = zoomOut();
-            cellSizeValueSpan.textContent = `${newSize}px`;
+            zoomOut();
+            updateUI(); // Update UI after zoom
         });
 
         // Event listener for color picker
         cellColorPicker.addEventListener('input', (event) => {
             setCellColor(event.target.value);
+            updateUI(); // Update UI to reflect new config value
         });
     </script>
 </body>
