@@ -24,6 +24,7 @@
             <button id="saveButton">Save Board</button>
             <button id="loadButton">Load Board</button>
             <input type="file" id="fileInput" accept=".csv" style="display: none;">
+            <button id="undoButton">Undo</button>
         </div>
         <div class="mode-controls">
             <button id="createModeButton" class="active-mode">Create Cells</button>
@@ -70,7 +71,7 @@
         </div>
     </div>
     <script type="module">
-        import { initGame, startGame, pauseGame, stepGame, resetGame, setGameSpeed, setEditingMode, handleMouseDown, handleMouseMove, handleMouseUp, GAME_MODE_CREATE, GAME_MODE_DESTROY, GAME_MODE_COPY, GAME_MODE_PASTE, setGridDimensions, zoomIn, zoomOut, getGameConfig, setCellColor, GAME_MODE_RECOLOR, setMutationHueSatSpeed, setMutationLightnessSpeed, saveBoard, loadBoard } from 'game';
+        import { initGame, startGame, pauseGame, stepGame, resetGame, setGameSpeed, setEditingMode, handleMouseDown, handleMouseMove, handleMouseUp, GAME_MODE_CREATE, GAME_MODE_DESTROY, GAME_MODE_COPY, GAME_MODE_PASTE, setGridDimensions, zoomIn, zoomOut, getGameConfig, setCellColor, GAME_MODE_RECOLOR, setMutationHueSatSpeed, setMutationLightnessSpeed, saveBoard, loadBoard, goBackInHistory } from 'game';
 
         const canvas = document.getElementById('gameCanvas');
         const startBtn = document.getElementById('startButton');
@@ -87,6 +88,7 @@
         const copyModeBtn = document.getElementById('copyModeButton');
         const pasteModeBtn = document.getElementById('pasteModeButton');
         const recolorModeBtn = document.getElementById('recolorModeButton');
+        const undoBtn = document.getElementById('undoButton'); // New: Undo button
 
         // New elements for dimension and zoom controls
         const gridWidthInput = document.getElementById('gridWidth');
@@ -214,6 +216,8 @@
             deactivateAllModeButtons();
             recolorModeBtn.classList.add('active-mode');
         });
+
+        undoBtn.addEventListener('click', goBackInHistory); // New: Undo button listener
 
         speedSlider.addEventListener('input', (event) => {
             const newSpeed = parseInt(event.target.value, 10);

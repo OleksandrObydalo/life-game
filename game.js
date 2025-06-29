@@ -42,6 +42,11 @@ let selectionStart = null; // {row, col} of the first click for selection
 let selectionCurrentCorner = null; // {row, col} of the current mouse position (for live preview in copy mode)
 let isSelecting = false;   // True if the user is currently defining a selection rectangle (after first click, before second)
 
+// New state variables for history
+let gameHistory = []; // Stores past states of the grid
+let historyPointer = -1; // Points to the current state in gameHistory
+const MAX_HISTORY_LENGTH = 50; // Maximum number of states to keep in history
+
 // Helper functions for color conversion (Hex <-> RGB <-> HSL)
 function hexToRgb(hex) {
     const r = parseInt(hex.slice(1, 3), 16);
@@ -243,6 +248,7 @@ function getNextGeneration() {
 
 // Function to update and render the game
 function updateGame() {
+    addStateToHistory(); // Save current state before calculating next generation
     getNextGeneration();
     draw();
 }
@@ -373,6 +379,7 @@ function pasteCells(targetRow, targetCol) {
         return;
     }
 
+    addStateToHistory(); // Save state before pasting
     for (let r = 0; r < bufferRows; r++) {
         for (let c = 0; c < bufferCols; c++) {
             grid[targetRow + r][targetCol + c] = copyBuffer[r][c]; // Paste the color or 0
@@ -392,6 +399,7 @@ function recolorSelection(endPoint, newColor) {
         return;
     }
 
+    addStateToHistory(); // Save state before recoloring
     const { topLeft, bottomRight } = getMinMaxCorners(selectionStart, endPoint);
 
     for (let row = topLeft.row; row <= bottomRight.row; row++) {
@@ -419,6 +427,31 @@ function updateCanvasDimensionsAndDraw() {
     draw();
 }
 
+/**
+ * Adds the current grid state to the history.
+ * If the history pointer is not at the end, future states are discarded.
+ */
+function addStateToHistory() {
+    // If we've gone back in history and then make a change, clear all "future" states
+    if (historyPointer < gameHistory.length - 1) {
+        gameHistory = gameHistory.slice(0, historyPointer + 1);
+    }
+
+    // Push a deep copy of the current grid to history
+    gameHistory.push(JSON.parse(JSON.stringify(grid)));
+
+    // Trim history if it exceeds max length
+    if (gameHistory.length > MAX_HISTORY_LENGTH) {
+        gameHistory.shift(); // Remove the oldest state
+    } else {
+        historyPointer++; // Only increment if we added a new state at the end
+    }
+    // If length > MAX_HISTORY_LENGTH, pointer remains at MAX_HISTORY_LENGTH - 1
+    // If length <= MAX_HISTORY_LENGTH, pointer is always gameHistory.length - 1
+    // Simplifies to: historyPointer = gameHistory.length - 1;
+    historyPointer = gameHistory.length - 1;
+}
+
 // Public functions
 
 /**
@@ -430,6 +463,7 @@ export function initGame(canvasElement) {
     ctx = canvas.getContext('2d');
 
     initGrid(); // Initialize grid with default dimensions
+    addStateToHistory(); // Save the initial empty state
     updateCanvasDimensionsAndDraw(); // Set initial canvas size and draw
 }
 
@@ -456,6 +490,9 @@ export function handleMouseDown(x, y) {
     switch (currentEditingMode) {
         case GAME_MODE_CREATE:
         case GAME_MODE_DESTROY:
+            if (!isDrawing) { // Only add to history on the initial click for a drag operation
+                addStateToHistory();
+            }
             isDrawing = true; // Start continuous drawing/erasing
             toggleCell(row, col); // Toggle the initial cell
             draw(); // Redraw immediately for feedback
@@ -616,6 +653,9 @@ export function stepGame() {
 export function resetGame() {
     pauseGame();
     initGrid();
+    gameHistory = []; // Clear history
+    historyPointer = -1; // Reset pointer
+    addStateToHistory(); // Add the new initial empty state to history
     updateCanvasDimensionsAndDraw(); // Use this to redraw after clearing grid
     copyBuffer = null; // Also clear the copy buffer on reset
     clearSelectionState(); // Ensure selection UI is reset
@@ -664,6 +704,9 @@ export function setGridDimensions(newWidth, newHeight) {
     GRID_HEIGHT_CELLS = Math.max(MIN_GRID_DIM, Math.min(MAX_GRID_DIM, newHeight || GRID_HEIGHT_CELLS));
 
     initGrid(); // Re-initialize grid with new dimensions (clears current pattern)
+    gameHistory = []; // Clear history on dimension change
+    historyPointer = -1; // Reset pointer
+    addStateToHistory(); // Add the new initial empty state to history
     updateCanvasDimensionsAndDraw(); // Update canvas size and redraw
     copyBuffer = null; // Clear copy buffer on grid resize
     clearSelectionState(); // Clear any active selection
@@ -788,6 +831,10 @@ export function loadBoard(csvContent) {
         GRID_HEIGHT_CELLS = newHeight;
         grid = newLoadedGrid; // Replace current grid with the loaded one
 
+        gameHistory = []; // Clear history on load
+        historyPointer = -1; // Reset pointer
+        addStateToHistory(); // Add the newly loaded board as the first history state
+
         updateCanvasDimensionsAndDraw(); // Update canvas dimensions and redraw the loaded grid
         copyBuffer = null; // Clear copy buffer as the board has fundamentally changed
         clearSelectionState(); // Clear any active selection state
@@ -802,6 +849,22 @@ export function loadBoard(csvContent) {
         if (wasRunning) {
             startGame();
         }
+    }
+}
+
+/**
+ * Steps one state back in the game history.
+ */
+export function goBackInHistory() {
+    if (historyPointer > 0) {
+        pauseGame(); // Pause the game when going back in history
+        historyPointer--;
+        // Deep copy the historical state to avoid mutating it when the user makes new changes
+        grid = JSON.parse(JSON.stringify(gameHistory[historyPointer]));
+        draw();
+        console.log(`Stepped back to history state ${historyPointer + 1}/${gameHistory.length}`);
+    } else {
+        console.log("No more history to go back to.");
     }
 }
 
